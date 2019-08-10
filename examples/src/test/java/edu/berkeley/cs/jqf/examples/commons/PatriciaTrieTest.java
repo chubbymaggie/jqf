@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Regents of the University of California
+ * Copyright (c) 2019, The Regents of the University of California
  *
  * All rights reserved.
  *
@@ -26,36 +26,47 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.berkeley.cs.jqf.instrument.tracing.events;
+package edu.berkeley.cs.jqf.examples.commons;
 
-import janala.logger.inst.MemberRef;
+import java.util.HashMap;
+import java.util.Map;
+
+import edu.berkeley.cs.jqf.fuzz.Fuzz;
+import edu.berkeley.cs.jqf.fuzz.JQF;
+import org.apache.commons.collections4.Trie;
+import org.apache.commons.collections4.trie.PatriciaTrie;
+import org.junit.runner.RunWith;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Rohan Padhye
  */
-public class CallEvent extends TraceEvent {
-    protected final MemberRef invokedMethod;
-    private String str;
+@RunWith(JQF.class)
+public class PatriciaTrieTest {
 
-    public CallEvent(int iid, MemberRef containingMethod, int lineNumber, MemberRef invokedMethod) {
-        super(iid, containingMethod, lineNumber);
-        this.invokedMethod = invokedMethod;
-    }
-
-    public String getInvokedMethodName() {
-        if (str == null) {
-            this.str = invokedMethod.getOwner() + "#" + invokedMethod.getName() + invokedMethod.getDesc();
+    @Fuzz
+    public void testPrefixMap(HashMap<String, Integer> map, String prefix) {
+        assumeTrue(prefix.length() > 0);
+        // Create new trie with input `map`
+        PatriciaTrie trie = new PatriciaTrie(map);
+        // Get sub-map whose keys start with `prefix`
+        Map prefixMap = trie.prefixMap(prefix);
+        // Ensure that it contains all keys that start with `prefix`
+        for (String key : map.keySet()) {
+            if (key.startsWith(prefix)) {
+                assertTrue(prefixMap.containsKey(key));
+            }
         }
-        return str;
     }
 
-    @Override
-    public String toString() {
-        return String.format("CALL(%d,%d,%s)", iid, lineNumber, getInvokedMethodName());
-    }
-
-    @Override
-    public void applyVisitor(TraceEventVisitor v) {
-        v.visitCallEvent(this);
+    @Fuzz
+    public void testCopy(Map<String, Integer> map, String key) {
+        assumeTrue(map.containsKey(key));
+        // Create new trie with input `map`
+        Trie trie = new PatriciaTrie(map);
+        // The key should exist in the trie as well
+        assertTrue(trie.containsKey(key));
     }
 }
